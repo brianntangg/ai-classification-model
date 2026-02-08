@@ -1,28 +1,26 @@
-BINARY IMAGE CLASSIFICATION OF PEOPLE AND FOOD
-USING A CONVOLUTIONAL NEURAL NETWORK IN PYTORCH
-=================================================
+BINARY IMAGE CLASSIFICATION: PEOPLE VS FOOD
+=============================================
+Final Project Report
 
 
 1. INTRODUCTION
 
-This report describes the development and evaluation of a binary image
-classifier that distinguishes between photographs of people and photographs
-of food. The classifier is built entirely in PyTorch using a custom
-convolutional neural network (CNN) trained on a hand-collected dataset of
-64 images. The goal is to demonstrate a complete deep learning
-pipeline, from data preprocessing through model training and quantitative
-evaluation.
+For this project I built a binary image classifier that can tell apart
+photos of people from photos of food. The model is a convolutional neural
+network written from scratch in PyTorch, trained on a small dataset of
+64 images that I collected myself. The idea was to go through the full
+pipeline -- collecting data, preprocessing, building a model, training it,
+and then seeing how well it actually performs on images it hasn't seen.
 
 
-2. DATASET DESCRIPTION
+2. DATASET
 
-The dataset consists of 64 JPEG images divided evenly between two classes:
-people (32 images) and food (32 images). All images were collected by hand
-from personal photo libraries and represent real-world photographs with
-natural variation in lighting, composition, and background.
+I collected 64 JPEG images total, split evenly between people and food
+(32 each). These are real photos from personal photo libraries, so they
+have natural variation in lighting, angles, and backgrounds.
 
-The images are organized into three splits using a directory structure
-compatible with PyTorch's ImageFolder loader:
+I organized them into train, validation, and test folders so PyTorch's
+ImageFolder loader could pick them up automatically:
 
   Split         People    Food    Total    Proportion
   ---------------------------------------------------
@@ -32,49 +30,38 @@ compatible with PyTorch's ImageFolder loader:
   ---------------------------------------------------
   Total           32       32       64      100%
 
-Classes are balanced across every split. The training set provides the
-majority of examples for learning, the validation set offers a rough check
-during training, and the test set is held out entirely for final evaluation.
-ImageFolder assigns class indices alphabetically, so food maps to class 0
-and people maps to class 1.
+Both classes are balanced in every split. ImageFolder assigns indices
+alphabetically, so food = 0 and people = 1.
 
 
 3. PREPROCESSING
 
-All images undergo resizing to 64x64 pixels and normalization to a [-1, 1]
-range using a per-channel mean of 0.5 and standard deviation of 0.5. These
-steps ensure uniform input dimensions and center the pixel distribution
-around zero, which helps gradient-based optimization converge more
-smoothly.
+Every image gets resized to 64x64 pixels and normalized to a [-1, 1]
+range (mean=0.5, std=0.5 per channel). This gives the model a consistent
+input size and centers the pixel values around zero, which helps with
+training.
 
-Training images receive additional augmentation to artificially increase
-the effective dataset size and reduce overfitting:
+For the training set I also added some augmentation:
+  - Random horizontal flips (50% chance)
+  - Small random rotations (up to 10 degrees)
+  - Color jitter on brightness and contrast (up to 20%)
 
-  - Random horizontal flipping with 50% probability
-  - Random rotation up to 10 degrees
-  - Color jitter adjusting brightness and contrast by up to 20%
-
-Validation and test images receive only the resize and normalization steps,
-with no augmentation, to ensure evaluation reflects true model performance
-on unmodified inputs.
+The validation and test sets only get resized and normalized -- no
+augmentation -- so the accuracy numbers reflect how the model does on
+unmodified images.
 
 
 4. MODEL ARCHITECTURE
 
-The classifier, named PeopleFoodCNN, follows a standard convolutional
-architecture with three feature extraction blocks and two fully connected
-layers.
+The model (PeopleFoodCNN) has three convolutional blocks followed by
+two fully connected layers.
 
-Each convolutional block applies a 3x3 convolution with padding to preserve
-spatial dimensions, followed by batch normalization, a ReLU activation, and
-2x2 max pooling that halves the spatial resolution. The three blocks
-progressively increase the channel depth from 3 (RGB input) to 16, then 32,
-then 64. After the third block, the feature maps have shape 64x8x8, which
-are flattened into a 4096-element vector.
-
-The flattened features pass through a fully connected layer with 128 units
-and ReLU activation, a dropout layer with 30% drop probability, and a final
-linear layer that outputs two logits corresponding to the two classes.
+Each block does: 3x3 convolution -> batch normalization -> ReLU -> 2x2
+max pooling. The channels go from 3 (RGB) to 16 to 32 to 64, while the
+spatial size gets halved each time (64 -> 32 -> 16 -> 8). After the last
+block the feature maps are 64x8x8 = 4096 values, which get flattened and
+fed into a fully connected layer with 128 units, then dropout at 30%,
+and finally a 2-unit output layer.
 
   Layer                          Output Shape         Parameters
   ---------------------------------------------------------------
@@ -94,11 +81,10 @@ linear layer that outputs two logits corresponding to the two classes.
   ---------------------------------------------------------------
   Total trainable parameters: 548,482
 
-Batch normalization stabilizes training by normalizing intermediate
-activations. Dropout serves as a regularizer, randomly zeroing 30% of
-hidden units during training to discourage co-adaptation among neurons.
-The final two-logit output is paired with cross-entropy loss, which
-internally applies softmax to produce class probabilities.
+The batch norm helps keep training stable, and the dropout is there to
+reduce overfitting by randomly turning off neurons during training. The
+output is two logits that go into CrossEntropyLoss, which handles the
+softmax internally.
 
 
 5. TRAINING CONFIGURATION
@@ -109,17 +95,16 @@ internally applies softmax to produce class probabilities.
   Epochs:          30
   Device:          CPU
 
-Adam was chosen for its adaptive learning rate, which tends to converge
-faster than standard SGD on small datasets. A batch size of 8 was selected
-to provide sufficient gradient noise for regularization while keeping
-memory requirements low. Thirty epochs allowed the model ample time to
-converge without excessive training duration on CPU.
+I went with Adam because it generally converges faster than plain SGD,
+especially with smaller datasets. The batch size of 8 was small enough
+to fit easily in memory and also adds a bit of noise to the gradients
+which can help with generalization. I trained for 30 epochs, which was
+enough time for the loss to flatten out.
 
 
 6. RESULTS
 
-The model was trained for 30 epochs. The table below shows per-epoch
-training loss, validation accuracy, and test accuracy:
+Here are the per-epoch numbers:
 
   Epoch   Train Loss   Val Acc (%)   Test Acc (%)
   -------------------------------------------------
@@ -155,127 +140,85 @@ training loss, validation accuracy, and test accuracy:
      30       0.0154       100.00          80.00
   -------------------------------------------------
 
-Summary of key metrics:
-
   Final test accuracy:       80.00%
   Best test accuracy:       100.00% (epoch 3)
   Final validation accuracy: 100.00%
   Final training loss:        0.0154
 
-Training loss decreased from 1.0470 in the first epoch to 0.0154 by the
-thirtieth, indicating that the model successfully learned to fit the
-training data. The loss trajectory shows a clear downward trend with
-occasional fluctuations, particularly in the early epochs, before
-stabilizing below 0.05 in the final third of training.
+The training loss dropped from about 1.05 down to 0.015 over the 30
+epochs. It was a bit jumpy in the first 10 epochs or so but smoothed
+out after that.
 
-Validation accuracy reached 100% by epoch 1 and remained there for the
-remainder of training, with the sole exception of epoch 2 where it dipped
-to 50%. Given that the validation set contains only four images, a single
-misclassification shifts accuracy by 25 percentage points, so this brief
-dip is not unusual.
+Validation accuracy stayed at 100% almost the entire time. That sounds
+great but the validation set is only 4 images, so getting even one wrong
+drops it to 75%. It's too small to really tell us much.
 
-Test accuracy fluctuated between 60% and 100% throughout training. The
-model achieved perfect test accuracy at epochs 3, 8, and 17, but settled
-at 80% for the final epoch. The predominant test accuracy across most
-epochs was 80%, corresponding to two test images (out of 10) being
-consistently misclassified. This variability highlights the sensitivity
-of accuracy measurements on small test sets.
+Test accuracy bounced around quite a bit -- anywhere from 60% to 100%
+depending on the epoch. It hit 100% a few times (epochs 3, 8, 17) but
+mostly sat at 80%. By the end of training it settled at 80%, meaning
+2 out of 10 test images were being misclassified.
 
 
 7. DISCUSSION
 
-The model achieved a final test accuracy of 80%, correctly classifying 8
-out of 10 held-out images. While this result is reasonable for a small
-dataset, several factors warrant discussion.
+80% on the test set means the model got 8 out of 10 right. That's decent
+considering how small the dataset is, but there's clearly room for
+improvement.
 
-Performance analysis. The training loss converged to near zero, indicating
-that the model learned the training set effectively. This is expected with
-50 training images and over 548,000 parameters. The gap between near-perfect
-training performance and 80% test accuracy suggests some degree of
-overfitting, which is common when the parameter count far exceeds the
-number of training examples.
+The training loss got very close to zero, which tells me the model
+basically memorized the training data. With 548,000 parameters and only
+50 training images, that's not surprising. The gap between perfect
+training accuracy and 80% test accuracy is a sign of overfitting -- the
+model learned the training images really well but didn't fully generalize
+to new ones.
 
-Sources of misclassification. The two persistent test errors likely stem
-from ambiguous images where visual cues overlap between the two classes.
-For instance, a photo of a person holding food, an image with cluttered
-backgrounds, or one with atypical framing could confuse the classifier.
-Small datasets inevitably contain borderline examples that
-disproportionately affect measured accuracy.
+The 2 images it kept getting wrong are probably tricky cases. Some of
+the photos in the dataset have people near food or food in the background
+of people shots, which could easily confuse the model. With only 10 test
+images, even one borderline photo has a big impact on the accuracy number.
 
-Validation set reliability. The validation set of four images is too small
-to serve as a reliable indicator of generalization. Its consistently
-perfect accuracy after epoch 2 does not necessarily mean the model
-generalizes well; rather, it reflects that those four specific images
-happen to be easy for the model. A larger validation set would provide
-more meaningful feedback during training.
+The validation set at 4 images is really too small to be useful as a
+guide during training. It mostly just confirmed that those 4 particular
+images were easy for the model.
 
 
-8. LIMITATIONS
+8. LIMITATIONS AND IMPROVEMENTS
 
-Several limitations affect the reliability and generalizability of this
-classifier:
+The biggest limitation is the dataset size. 64 images is very small for
+training a CNN -- normally you'd want hundreds or thousands per class.
+The model has way more parameters than training examples, which makes
+overfitting hard to avoid.
 
-  1. The dataset of 64 images is far smaller than what is typical for
-     training deep learning models. Production classifiers generally
-     require hundreds to thousands of images per class.
+The 64x64 input resolution also throws away a lot of detail. At that
+size, faces become blurry and smaller features in food images get lost.
+Bumping this up to 128x128 or 224x224 would probably help.
 
-  2. The 64x64 resolution discards fine-grained details that might help
-     with difficult cases. Faces, text on food packaging, and other
-     distinguishing features become blurred at this resolution.
-
-  3. With only two people contributing images (or one source library),
-     the dataset likely lacks diversity in demographics, cuisines,
-     photography styles, and settings.
-
-  4. No learning rate scheduling was used. A scheduler such as
-     ReduceLROnPlateau could help the optimizer converge more precisely
-     in later epochs.
-
-  5. The absence of cross-validation means the reported accuracy depends
-     heavily on which specific images ended up in the test split.
+If I were to improve this project, the two biggest things would be:
+getting more training data (at least a couple hundred images per class),
+and trying transfer learning with a pretrained model like ResNet-18
+instead of training from scratch. A pretrained model already knows how
+to extract useful features from images, so it would likely do much
+better even with limited data. Adding a learning rate scheduler could
+also help the model converge more precisely toward the end of training.
 
 
-9. POTENTIAL IMPROVEMENTS
+9. FILES
 
-  1. Collect a larger dataset with at least 200 images per class, drawn
-     from varied sources, to improve generalization.
-
-  2. Apply transfer learning using a pretrained model such as ResNet-18.
-     Fine-tuning only the final classification layer would leverage
-     features learned on ImageNet and likely outperform a model trained
-     from scratch on 50 images.
-
-  3. Increase input resolution to 128x128 or 224x224 to retain more
-     visual information.
-
-  4. Add a learning rate scheduler to reduce the learning rate when
-     validation loss plateaus.
-
-  5. Compute per-class precision, recall, and a confusion matrix to
-     understand whether errors are concentrated in one class.
-
-  6. Use k-fold cross-validation to produce a more robust accuracy
-     estimate independent of the specific train/test split.
-
-
-10. GENERATED FILES
-
-  train.py                       Training script (model, pipeline, evaluation)
+  train.py                       Training script
   final_report.txt               This report
-  data/                          Dataset directory with train/val/test splits
-  outputs/model.pth              Trained model weights (state dictionary)
-  outputs/training_loss.png      Plot of training loss vs. epoch
-  outputs/test_accuracy.png      Plot of test accuracy vs. epoch
-  outputs/training_log.txt       Per-epoch numerical training log
+  data/                          Dataset (train/val/test splits)
+  outputs/model.pth              Trained model weights
+  outputs/training_loss.png      Training loss plot
+  outputs/test_accuracy.png      Test accuracy plot
+  outputs/training_log.txt       Per-epoch training log
 
 
-11. CONCLUSION
+10. CONCLUSION
 
-This project demonstrated a complete binary image classification pipeline
-using PyTorch. A custom three-block CNN was trained on 50 images and
-evaluated on a held-out test set of 10, achieving a final accuracy of 80%.
-The training loss converged smoothly, and the model learned to distinguish
-between people and food with reasonable reliability given the constraints
-of the dataset. The primary bottleneck is dataset size; expanding the
-training set and applying transfer learning would be the most impactful
-next steps for improving classifier performance.
+This project covered the full process of building an image classifier
+in PyTorch: collecting images, preprocessing them, designing a CNN,
+training it, and evaluating the results. The model ended up at 80% test
+accuracy, which is reasonable for 50 training images but not great
+overall. The main takeaway is that dataset size matters a lot -- with
+more data or a pretrained model, the accuracy would almost certainly
+be higher.
