@@ -9,7 +9,7 @@ For this project I built a binary image classifier that can tell apart
 photos of people from photos of food. The model is a convolutional neural
 network written from scratch in PyTorch, trained on a small dataset of
 64 images that I collected myself. The idea was to go through the full
-pipeline -- collecting data, preprocessing, building a model, training it,
+pipeline: collecting data, preprocessing, building a model, training it,
 and then seeing how well it actually performs on images it hasn't seen.
 
 
@@ -46,8 +46,8 @@ For the training set I also added some augmentation:
   - Small random rotations (up to 10 degrees)
   - Color jitter on brightness and contrast (up to 20%)
 
-The validation and test sets only get resized and normalized -- no
-augmentation -- so the accuracy numbers reflect how the model does on
+The validation and test sets only get resized and normalized, with no
+augmentation, so the accuracy numbers reflect how the model does on
 unmodified images.
 
 
@@ -153,7 +153,7 @@ Validation accuracy stayed at 100% almost the entire time. That sounds
 great but the validation set is only 4 images, so getting even one wrong
 drops it to 75%. It's too small to really tell us much.
 
-Test accuracy bounced around quite a bit -- anywhere from 60% to 100%
+Test accuracy bounced around quite a bit, anywhere from 60% to 100%
 depending on the epoch. It hit 100% a few times (epochs 3, 8, 17) but
 mostly sat at 80%. By the end of training it settled at 80%, meaning
 2 out of 10 test images were being misclassified.
@@ -168,7 +168,7 @@ improvement.
 The training loss got very close to zero, which tells me the model
 basically memorized the training data. With 548,000 parameters and only
 50 training images, that's not surprising. The gap between perfect
-training accuracy and 80% test accuracy is a sign of overfitting -- the
+training accuracy and 80% test accuracy is a sign of overfitting. The
 model learned the training images really well but didn't fully generalize
 to new ones.
 
@@ -185,7 +185,7 @@ images were easy for the model.
 8. LIMITATIONS AND IMPROVEMENTS
 
 The biggest limitation is the dataset size. 64 images is very small for
-training a CNN -- normally you'd want hundreds or thousands per class.
+training a CNN. Normally you'd want hundreds or thousands per class.
 The model has way more parameters than training examples, which makes
 overfitting hard to avoid.
 
@@ -219,6 +219,6 @@ This project covered the full process of building an image classifier
 in PyTorch: collecting images, preprocessing them, designing a CNN,
 training it, and evaluating the results. The model ended up at 80% test
 accuracy, which is reasonable for 50 training images but not great
-overall. The main takeaway is that dataset size matters a lot -- with
+overall. The main takeaway is that dataset size matters a lot. With
 more data or a pretrained model, the accuracy would almost certainly
 be higher.
