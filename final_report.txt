@@ -158,6 +158,18 @@ depending on the epoch. It hit 100% a few times (epochs 3, 8, 17) but
 mostly sat at 80%. By the end of training it settled at 80%, meaning
 2 out of 10 test images were being misclassified.
 
+The 2 misclassified test images were both food photos that the model
+incorrectly predicted as people:
+
+  Filename                                               True    Predicted
+  -------------------------------------------------------------------------
+  A1B20D70-8AC7-4140-BBEE-D1B05A15D007_1_105_c.jpeg     food    people
+  EB0CA421-7C39-4CD0-A2A4-295981B411C7_1_105_c.jpeg     food    people
+
+The model correctly classified all 5 people images and 3 out of 5 food
+images. The errors were one-directional: food misclassified as people,
+with no people images misclassified as food.
+
 
 7. DISCUSSION
 
@@ -172,10 +184,14 @@ training accuracy and 80% test accuracy is a sign of overfitting. The
 model learned the training images really well but didn't fully generalize
 to new ones.
 
-The 2 images it kept getting wrong are probably tricky cases. Some of
-the photos in the dataset have people near food or food in the background
-of people shots, which could easily confuse the model. With only 10 test
-images, even one borderline photo has a big impact on the accuracy number.
+Both misclassified images were food photos predicted as people
+(A1B20D70 and EB0CA421). This suggests the model may have picked up on
+background features in those food images that resemble people, or that
+those particular food photos contain visual elements (like hands serving
+food, or a restaurant setting) that the model associated with the people
+class. However, the model had no trouble with any of the people images.
+With only 10 test images, even one borderline photo has a big impact on
+the accuracy number.
 
 The validation set at 4 images is really too small to be useful as a
 guide during training. It mostly just confirmed that those 4 particular
@@ -204,7 +220,7 @@ also help the model converge more precisely toward the end of training.
 
 9. FILES
 
-  train.py                       Training script
+  train.py                       Training script (includes per-image evaluation)
   final_report.txt               This report
   data/                          Dataset (train/val/test splits)
   outputs/model.pth              Trained model weights
