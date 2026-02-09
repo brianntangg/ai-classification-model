@@ -18,6 +18,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
+from PIL import Image
 import matplotlib
 matplotlib.use("Agg")  # Non-interactive backend for saving plots
 import matplotlib.pyplot as plt
@@ -252,6 +253,44 @@ def save_training_log(train_losses, val_accuracies, test_accuracies):
     print(f"  Saved: outputs/training_log.txt")
 
 
+def evaluate_per_image(model, class_names):
+    """Evaluate each test image individually and report misclassifications by filename."""
+    test_dir = os.path.join(DATA_DIR, "test")
+    model.eval()
+    misclassified = []
+
+    print("Per-image test results:")
+    for true_label_name in sorted(os.listdir(test_dir)):
+        class_dir = os.path.join(test_dir, true_label_name)
+        if not os.path.isdir(class_dir):
+            continue
+        true_idx = class_names.index(true_label_name)
+
+        for filename in sorted(os.listdir(class_dir)):
+            if not filename.lower().endswith((".jpeg", ".jpg", ".png")):
+                continue
+            image = Image.open(os.path.join(class_dir, filename)).convert("RGB")
+            tensor = eval_transform(image).unsqueeze(0).to(DEVICE)
+
+            with torch.no_grad():
+                output = model(tensor)
+                _, predicted = torch.max(output, 1)
+                pred_idx = predicted.item()
+
+            status = "CORRECT" if pred_idx == true_idx else "WRONG"
+            if pred_idx != true_idx:
+                misclassified.append((filename, true_label_name, class_names[pred_idx]))
+            print(f"  {status:>7}  | True: {true_label_name:<8} | Predicted: {class_names[pred_idx]:<8} | {filename}")
+
+    if misclassified:
+        print()
+        print("Misclassified images:")
+        for fname, true_lbl, pred_lbl in misclassified:
+            print(f"  - {fname} (true: {true_lbl}, predicted: {pred_lbl})")
+
+    return misclassified
+
+
 # ============================================================
 # 7. Main — Full Pipeline
 # ============================================================
@@ -325,6 +364,11 @@ def main():
     # Save plots and log
     save_plots(train_losses, test_accuracies)
     save_training_log(train_losses, val_accuracies, test_accuracies)
+
+    # Per-image test evaluation
+    print()
+    class_names = sorted(os.listdir(os.path.join(DATA_DIR, "test")))
+    evaluate_per_image(model, class_names)
 
     print()
     print("Training complete! All outputs saved to outputs/")
